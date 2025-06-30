@@ -1,36 +1,47 @@
-# Use official PHP with Apache image
+# Use official PHP Apache image
 FROM php:8.2-apache
 
-# Install dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    libzip-dev unzip git curl libpng-dev libonig-dev libxml2-dev zip libjpeg-dev libfreetype6-dev \
+    zip unzip git curl libzip-dev libpng-dev libonig-dev libxml2-dev libjpeg-dev libfreetype6-dev \
     && docker-php-ext-install pdo pdo_mysql zip gd
 
-# Enable Apache rewrite module
+# Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy app source code
+# Copy composer from composer image
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copy app files
 COPY . .
 
-# Copy Composer from official image
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Set Apache to serve Laravel public folder
+RUN echo "<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html/public\n\
+    <Directory /var/www/html/public>\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+</VirtualHost>" > /etc/apache2/sites-available/000-default.conf
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Fix permissions for Laravel
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 storage bootstrap/cache
+# Generate Laravel app key (skip if you're using Render's env secret setup)
+RUN php artisan key:generate
 
-# Replace default Apache port with Render's dynamic PORT env variable
-RUN sed -i 's/Listen 80/Listen ${PORT}/' /etc/apache2/ports.conf && \
-    echo "<VirtualHost *:${PORT}>\n\tDocumentRoot /var/www/html/public\n\t<Directory /var/www/html/public>\n\t\tAllowOverride All\n\t</Directory>\n</VirtualHost>" > /etc/apache2/sites-available/000-default.conf
+# Optional: Run migrations automatically on deploy
+# RUN php artisan migrate --force
 
-# Expose default port (Render will override with $PORT)
+# Expose port 80 for HTTP
 EXPOSE 80
 
-# Start Apache in foreground
-CMD ["apache2ctl", "-D", "FOREGROUND"]
+# Start Apache server
+CMD ["apache2-foreground"]
