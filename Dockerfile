@@ -18,13 +18,14 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy app files
 COPY . .
 
-# Set Apache to serve Laravel public folder
-RUN echo "<VirtualHost *:80>\n\
-    DocumentRoot /var/www/html/public\n\
-    <Directory /var/www/html/public>\n\
-        AllowOverride All\n\
-        Require all granted\n\
-    </Directory>\n\
+# Set Apache to serve Laravel from public folder
+RUN echo "<VirtualHost *:80>
+    DocumentRoot /var/www/html/public
+    <Directory /var/www/html/public>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
 </VirtualHost>" > /etc/apache2/sites-available/000-default.conf
 
 # Set permissions
@@ -33,11 +34,6 @@ RUN chown -R www-data:www-data /var/www/html \
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
-
-
-# Replace default Apache port with Render's port
-RUN sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf && \
-    echo "<VirtualHost *:${PORT}>\n\tDocumentRoot /var/www/html/public\n</VirtualHost>" > /etc/apache2/sites-available/000-default.conf
 
 
 # Expose port 80 for HTTP
