@@ -35,8 +35,10 @@ RUN chown -R www-data:www-data /var/www/html \
 RUN composer install --no-dev --optimize-autoloader
 
 
-# Optional: Run migrations automatically on deploy
-# RUN php artisan migrate --force
+# Replace default Apache port with Render's port
+RUN sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf && \
+    echo "<VirtualHost *:${PORT}>\n\tDocumentRoot /var/www/html/public\n</VirtualHost>" > /etc/apache2/sites-available/000-default.conf
+
 
 # Expose port 80 for HTTP
 EXPOSE 80
