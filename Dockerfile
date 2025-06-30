@@ -34,8 +34,6 @@ RUN chown -R www-data:www-data /var/www/html \
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Generate Laravel app key (skip if you're using Render's env secret setup)
-RUN php artisan key:generate
 
 # Optional: Run migrations automatically on deploy
 # RUN php artisan migrate --force
