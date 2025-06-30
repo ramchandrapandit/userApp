@@ -1,9 +1,8 @@
-# Use official PHP image with Apache
 FROM php:8.2-apache
 
-# Install required PHP extensions and system packages
+# Install PHP extensions
 RUN apt-get update && apt-get install -y \
-    zip unzip curl libpng-dev libonig-dev libxml2-dev \
+    git curl zip unzip libpng-dev libonig-dev libxml2-dev \
     && docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd
 
 # Enable Apache mod_rewrite
@@ -12,20 +11,28 @@ RUN a2enmod rewrite
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy Laravel app to the container
+# Copy Laravel files
 COPY . .
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Install Laravel dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Set proper permissions
+# Set permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
-# Expose port 80
+# Configure Apache to use Laravel's public/ directory
+RUN echo '<VirtualHost *:80>\n\
+    ServerAdmin admin@example.com\n\
+    DocumentRoot /var/www/html/public\n\
+    <Directory /var/www/html/public>\n\
+        Options Indexes FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
+
 EXPOSE 80
 
 CMD ["apache2-foreground"]
