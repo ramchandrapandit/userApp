@@ -18,7 +18,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy app files
 COPY . .
 
-# Set Apache to serve Laravel from public folder
+# Configure Apache to serve Laravel from public directory
 RUN echo "<VirtualHost *:80>
     DocumentRoot /var/www/html/public
     <Directory /var/www/html/public>
